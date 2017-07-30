@@ -35,7 +35,6 @@ type NetAddress struct {
 
 type Meta struct {
 	Name string
-
 	Master NetAddress
 	Slaves []NetAddress
 }
@@ -185,8 +184,8 @@ func GetSentinelInfo(wh *gxtime.Wheel, span time.Duration) {
 			}
 			ver = atomic.AddInt32(&version, 1)
 			infoMap[int(ver)] = metas
-			SetMeta(int(ver), metas)
 			delete(infoMap, int(ver-1024))
+			SetMeta(int(ver), metas)
 			DelMeta(int(ver-1024))
 
 		case str = <-ch:
@@ -232,8 +231,8 @@ func GetSentinelInfo(wh *gxtime.Wheel, span time.Duration) {
 
 			ver = atomic.AddInt32(&version, 1)
 			infoMap[int(ver)] = metas
-			SetMeta(int(ver), metas)
 			delete(infoMap, int(ver-1024))
+			SetMeta(int(ver), metas)
 			DelMeta(int(ver-1024))
 		}
 	}
@@ -330,3 +329,32 @@ func DelMeta(ver int) (err error) {
 	return nil
 }
 
+
+func GetMeta(ver int) (metas []Meta, err error) {
+
+	var tmp []Meta
+	tmp = make([]Meta, 3)
+
+	// connect redis
+	conn, err := redis.Dial("tcp", DBAddr)
+	if err != nil {
+		fmt.Println("connect error: ", err)
+		return nil, err
+	}
+	defer conn.Close()
+
+	// json数据在go中是[]byte类型，所以此处用redis.Bytes转换
+	valueBytes, err2 := redis.Bytes(conn.Do("GET", ver))
+	if err2 != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(valueBytes, &tmp)
+	if err != nil {
+		fmt.Println("error to transform data from bytes to []Meta, error", err)
+		return nil, err
+	}
+	metas = append(metas, tmp...)
+
+	return tmp, err
+}
