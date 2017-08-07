@@ -26,6 +26,7 @@ var (
 const (
 	SentinelAddr = "192.168.1.105:40000"
 	DBAddr = "192.168.1.105:20000"
+	HashName = "MetaHash"
 )
 
 type NetAddress struct {
@@ -300,7 +301,7 @@ func SetMeta(ver int, data []Meta) error {
 		return err
 	}
 
-	_, err = conn.Do("SET", ver, value)
+	_, err = conn.Do("HSET", HashName, ver, value)
 	if err != nil {
 		fmt.Println("store error\n")
 		return err
@@ -320,7 +321,7 @@ func DelMeta(ver int) (err error) {
 	defer conn.Close()
 
 	// delete data which version is ver
-	_, err = conn.Do("DEL", ver)
+	_, err = conn.Do("HDEL", HashName, ver)
 	if err != nil {
 		fmt.Println("delete error\n")
 		return err
@@ -344,7 +345,7 @@ func GetMeta(ver int) (metas []Meta, err error) {
 	defer conn.Close()
 
 	// json数据在go中是[]byte类型，所以此处用redis.Bytes转换
-	valueBytes, err2 := redis.Bytes(conn.Do("GET", ver))
+	valueBytes, err2 := redis.Bytes(conn.Do("HGET", HashName, ver))
 	if err2 != nil {
 		return nil, err
 	}
